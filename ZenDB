@@ -1,0 +1,164 @@
+Create database
+test> use ZenClassDB
+
+Create collections:
+ZenClassDB> db.createCollection("users")
+... db.createCollection("codekata")
+... db.createCollection("attendance")
+... db.createCollection("topics")
+... db.createCollection("tasks")
+... db.createCollection("company_drives")
+... db.createCollection("mentors")
+{ ok: 1 }
+
+Insert datas to this collection
+attendance
+codekata
+company_drives
+mentors
+tasks
+topics
+users
+ZenClassDB> // users
+... db.users.insertOne({
+...   user_id: 1,
+...   name: "John Doe",
+...   email: "john@example.com",
+...   batch: "B43WD"
+... })
+...
+... // codekata
+... db.codekata.insertOne({
+...   user_id: 1,
+...   problems_solved: 120
+... })
+...
+... // attendance
+... db.attendance.insertOne({
+...   user_id: 1,
+...   date: ISODate("2020-10-20"),
+...   status: "present"
+... })
+...
+... // topics
+... db.topics.insertOne({
+...   topic_id: 1,
+...   topic: "MongoDB Basics",
+...   topic_date: ISODate("2020-10-18")
+... })
+...
+... // tasks
+... db.tasks.insertOne({
+...   task_id: 1,
+...   user_id: 1,
+...   task_name: "MongoDB Task",
+...   task_date: ISODate("2020-10-19"),
+...   submitted: true
+... })
+...
+... // company_drives
+... db.company_drives.insertOne({
+...   drive_id: 1,
+...   company: "Google",
+...   drive_date: ISODate("2020-10-25"),
+...   student_ids: [1, 2, 3]
+... })
+...
+... // mentors
+... db.mentors.insertOne({
+...   mentor_id: 1,
+...   name: "Mr. Smith",
+...   mentee_count: 20
+... })
+{
+  acknowledged: true,
+  insertedId: ObjectId('68a3150c4c3d5c679feec4af')
+}
+
+Finding topics:
+ZenClassDB> db.topics.find({
+...   topic_date: { $gte: ISODate("2020-10-01"), $lt: ISODate("2020-11-01") }
+... })
+...
+... db.tasks.find({
+...   task_date: { $gte: ISODate("2020-10-01"), $lt: ISODate("2020-11-01") }
+... })
+[
+  {
+    _id: ObjectId('68a3150c4c3d5c679feec4ad'),
+    task_id: 1,
+    user_id: 1,
+    task_name: 'MongoDB Task',
+    task_date: ISODate('2020-10-19T00:00:00.000Z'),
+    submitted: true
+  }
+]
+
+Company drive.finds:
+ZenClassDB> db.company_drives.find({
+...   drive_date: { $gte: ISODate("2020-10-15"), $lte: ISODate("2020-10-31") }
+... })
+[
+  {
+    _id: ObjectId('68a3150c4c3d5c679feec4ae'),
+    drive_id: 1,
+    company: 'Google',
+    drive_date: ISODate('2020-10-25T00:00:00.000Z'),
+    student_ids: [ 1, 2, 3 ]
+  }
+]
+
+Codekata find:
+ZenClassDB> db.codekata.aggregate([
+...   {
+...     $group: {
+...       _id: "$user_id",
+...       total_problems_solved: { $sum: "$problems_solved" }
+...     }
+...   }
+... ])
+[ { _id: 1, total_problems_solved: 120 } ]
+ZenClassDB> db.mentors.find({ mentee_count: { $gt: 15 } })
+[
+  {
+    _id: ObjectId('68a3150c4c3d5c679feec4af'),
+    mentor_id: 1,
+    name: 'Mr. Smith',
+    mentee_count: 20
+  }
+]
+
+Attendance Aggregation;
+ZenClassDB> db.attendance.aggregate([
+...   {
+...     $match: {
+...       date: { $gte: ISODate("2020-10-15"), $lte: ISODate("2020-10-31") },
+...       status: "absent"
+...     }
+...   },
+...   {
+...     $lookup: {
+...       from: "tasks",
+...       localField: "user_id",
+...       foreignField: "user_id",
+...       as: "user_tasks"
+...     }
+...   },
+...   {
+...     $match: {
+...       "user_tasks.submitted": false
+...     }
+...   },
+...   {
+...     $count: "absent_and_not_submitted"
+...   }
+... ])
+Attendace.find():
+ZenClassDB> db.attendance.find()
+[
+  {
+    _id: ObjectId('68a3150c4c3d5c679feec4ab'),
+    user_id: 1,
+    date: ISODate('2020-10-20T00:00:00.000Z'),
+    status: 'present'
+  }
